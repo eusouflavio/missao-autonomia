@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Missão Autonomia - O Jogo da Sua Rotina!</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti for Celebration Effects -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Tone.js for Sound Effects -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fredoka: ['Fredoka', 'sans-serif'],
+          },
+          colors: {
+            brandYellow: '#FFD166',
+            brandGreen: '#06D6A0',
+            brandBlue: '#118AB2',
+            brandRed: '#EF476F',
+            brandPurple: '#8338EC',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Fredoka', sans-serif;
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border: 3px solid rgba(255, 255, 255, 0.6);
+    }
+    .task-card {
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .task-card:hover {
+      transform: translateY(-4px) scale(1.01);
+    }
+    .badge-pop {
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop {
+      0% { transform: scale(0.8); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.4);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #118AB2;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="text-slate-800 p-3 sm:p-6 pb-20">
+
+  <!-- APP CONTAINER -->
+  <div id="app" class="max-w-4xl mx-auto">
+
+    <!-- HEADER / PROFILE SELECTOR -->
+    <header class="glass-card rounded-3xl p-4 sm:p-6 mb-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <!-- Title & Branding -->
+      <div class="flex items-center gap-3">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brandPurple to-brandRed flex items-center justify-center text-white text-3xl shadow-lg transform -rotate-6">
+          🚀
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brandPurple to-brandRed bg-clip-text text-transparent">
+            Missão Autonomia
+          </h1>
+          <p class="text-sm font-medium text-slate-600">Transforme suas tarefas em Superpoderes!</p>
+        </div>
+      </div>
+
+      <!-- Kids Profile Switcher -->
+      <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-2xl border-2 border-slate-200" id="profileSelector">
+        <!-- Rendered via JS -->
+      </div>
+    </header>
+
+    <!-- ACTIVE PROFILE DASHBOARD -->
+    <div id="heroDashboard" class="glass-card rounded-3xl p-5 sm:p-6 mb-6 shadow-xl relative overflow-hidden">
+      <!-- Background decoration -->
+      <div class="absolute -right-8 -bottom-8 opacity-10 text-9xl select-none pointer-events-none">⭐</div>
+
+      <div class="flex flex-col md:flex-row items-center gap-6">
+        <!-- Avatar & Level -->
+        <div class="flex flex-col items-center">
+          <div class="relative">
+            <div id="heroAvatar" class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-amber-400 bg-amber-100 shadow-inner flex items-center justify-center text-5xl sm:text-6xl badge-pop">
+              🧙‍♂️
+            </div>
+            <span id="heroLevelBadge" class="absolute -bottom-2 bg-amber-500 text-white font-bold px-3 py-1 rounded-full text-xs sm:text-sm shadow border-2 border-white">
+              Nível 1
+            </span>
+          </div>
+          <button onclick="editAvatar()" class="mt-2 text-xs font-semibold text-brandBlue hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-pen-to-square"></i> Mudar Avatar
+          </button>
+        </div>
+
+        <!-- Stats & Progress Bars -->
+        <div class="flex-1 w-full space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 id="heroName" class="text-2xl sm:text-3xl font-extrabold text-slate-800">Nome do Herói</h2>
+              <p id="heroTitle" class="text-sm font-semibold text-brandPurple">Aprendiz Destemido</p>
+            </div>
+
+            <!-- Currency Badges -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5 bg-amber-100 border-2 border-amber-300 px-3 py-1.5 rounded-2xl font-bold text-amber-700 shadow-sm">
+                <span class="text-xl">🪙</span>
+                <span id="heroCoins" class="text-lg">0</span>
+              </div>
+              <div class="flex items-center gap-1.5 bg-blue-100 border-2 border-blue-300 px-3 py-1.5 rounded-2xl font-bold text-blue-700 shadow-sm">
+                <span class="text-xl">⭐</span>
+                <span id="heroTotalXP" class="text-lg">0 XP</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- XP Progress Bar -->
+          <div>
+            <div class="flex justify-between text-xs font-bold text-slate-600 mb-1">
+              <span>Progresso de Nível</span>
+              <span id="xpText">0 / 100 XP</span>
+            </div>
+            <div class="w-full bg-slate-200 h-5 rounded-full overflow-hidden p-1 shadow-inner border border-slate-300">
+              <div id="xpBar" class="bg-gradient-to-r from-brandGreen to-brandBlue h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Quick Stats Summary -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-center text-xs font-bold">
+            <div class="bg-white/80 p-2 rounded-xl border border-slate-200">
+              <span class="block text-slate-500 text-[10px]">CONCLUÍDAS</span>
+              <span id="completedCount" class="text-brandGreen text-base">0</span>
+            </div>
+            <div class="bg-white/80 p-2 rounded-xl border border-slate-200">
+              <span class="block text-slate-500 text-[10px]">PENDENTES</span>
+              <span id="pendingCount" class="text-brandRed text-base">0</span>
+            </div>
+            <div class="bg-white/80 p-2 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
+              <span class="block text-slate-500 text-[10px]">RECOMPENSAS</span>
+              <span id="unlockedRewardsCount" class="text-brandPurple text-base">0 Trocas</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN TABS (MISSÕES vs LOJA) -->
+    <div class="flex gap-2 mb-4">
+      <button id="tabMissionsBtn" onclick="switchTab('missions')" class="flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-brandPurple text-white">
+        <i class="fa-solid fa-scroll"></i> Missões Diárias
+      </button>
+      <button id="tabShopBtn" onclick="switchTab('shop')" class="flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-white text-slate-600 hover:bg-slate-100">
+        <i class="fa-solid fa-store"></i> Loja de Prêmios 🪙
+      </button>
+    </div>
+
+    <!-- TAB 1: MISSIONS VIEW -->
+    <div id="tabMissions" class="space-y-6">
+
+      <!-- Category Filter & Add Task Button -->
+      <div class="glass-card rounded-2xl p-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-1.5 w-full sm:w-auto" id="categoryFilters">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Add Mission Button -->
+        <button onclick="openAddTaskModal()" class="w-full sm:w-auto bg-gradient-to-r from-brandGreen to-teal-500 text-white font-bold px-4 py-2.5 rounded-xl hover:opacity-90 shadow flex items-center justify-center gap-2 text-sm">
+          <i class="fa-solid fa-plus-circle text-lg"></i> Nova Missão
+        </button>
+      </div>
+
+      <!-- Missions List -->
+      <div id="missionsList" class="space-y-3">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TAB 2: SHOP / REWARDS VIEW -->
+    <div id="tabShop" class="hidden space-y-6">
+      
+      <!-- Shop Header Banner -->
+      <div class="glass-card rounded-2xl p-4 shadow-md flex justify-between items-center bg-gradient-to-r from-amber-100 to-amber-50">
+        <div>
+          <h3 class="text-lg font-bold text-amber-900">Mural de Recompensas em Família 🎁</h3>
+          <p class="text-xs text-amber-700">Junte moedas completando missões e troque por prêmios reais!</p>
+        </div>
+        <button onclick="openAddRewardModal()" class="bg-amber-500 text-white font-bold px-3 py-2 rounded-xl text-xs hover:bg-amber-600 shadow flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Novo Prêmio
+        </button>
+      </div>
+
+      <!-- Rewards Grid -->
+      <div id="rewardsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: NOVA MISSÃO -->
+  <div id="taskModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card rounded-3xl p-6 w-full max-w-md shadow-2xl relative bg-white">
+      <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span>✨</span> Cadastrar Nova Missão
+      </h3>
+      <form id="taskForm" onsubmit="handleAddTask(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Título da Missão</label>
+          <input type="text" id="taskTitle" required placeholder="Ex: Treinar Espanhol 15 min" class="w-full p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brandBlue text-sm font-medium">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Categoria</label>
+          <select id="taskCategory" class="w-full p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brandBlue text-sm font-medium">
+            <option value="estudos">📚 Estudos & Espanhol</option>
+            <option value="organizacao">🧺 Organização</option>
+            <option value="cuidados">🦷 Cuidados Pessoais</option>
+            <option value="criatividade">✍️ Oficina Criativa / Composição</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">XP Ganho</label>
+            <input type="number" id="taskXP" min="5" max="100" value="20" class="w-full p-3 rounded-xl border border-slate-300 text-sm font-bold text-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Moedas Ganhas</label>
+            <input type="number" id="taskCoins" min="1" max="50" value="5" class="w-full p-3 rounded-xl border border-slate-300 text-sm font-bold text-amber-600">
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAddTaskModal()" class="flex-1 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 text-sm hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-brandGreen text-white font-bold text-sm hover:opacity-90 shadow">Salvar Missão</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO PRÊMIO -->
+  <div id="rewardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card rounded-3xl p-6 w-full max-w-md shadow-2xl relative bg-white">
+      <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span>🎁</span> Adicionar Novo Prêmio
+      </h3>
+      <form id="rewardForm" onsubmit="handleAddReward(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Nome da Recompensa</label>
+          <input type="text" id="rewardTitle" required placeholder="Ex: Escolher o Filme de Sexta" class="w-full p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-medium">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Emoji / Ícone</label>
+          <input type="text" id="rewardIcon" maxlength="2" value="🎬" class="w-full p-3 rounded-xl border border-slate-300 text-center text-2xl">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Custo em Moedas 🪙</label>
+          <input type="number" id="rewardCost" min="1" max="500" value="25" class="w-full p-3 rounded-xl border border-slate-300 text-sm font-bold text-amber-600">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAddRewardModal()" class="flex-1 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 text-sm hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm hover:opacity-90 shadow">Criar Prêmio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MUDAR AVATAR -->
+  <div id="avatarModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card rounded-3xl p-6 w-full max-w-sm shadow-2xl relative bg-white text-center">
+      <h3 class="text-xl font-bold text-slate-800 mb-4">Escolha seu Avatar 🎨</h3>
+      <div class="grid grid-cols-4 gap-3 mb-6" id="avatarOptions">
+        <!-- Populated via JS -->
+      </div>
+      <button onclick="closeAvatarModal()" class="w-full py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-300">Fechar</button>
+    </div>
+  </div>
+
+  <!-- SCRIPT DA APLICAÇÃO -->
+  <script>
+    // --- ESTADO INICIAL DA APLICAÇÃO ---
+    const AVATARS = ['🧙‍♂️', '🦸‍♀️', '🎨', '🚀', '🐱‍👤', '🎸', '👑', '🐉', '⚽', '📚', '🌟', '👾'];
+
+    const CATEGORIES = {
+      todas: { label: 'Todas', icon: '✨' },
+      estudos: { label: 'Estudos / Espanhol', icon: '📚', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+      organizacao: { label: 'Organização', icon: '🧺', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+      cuidados: { label: 'Cuidados Pessoais', icon: '🦷', color: 'bg-pink-100 text-pink-700 border-pink-300' },
+      criatividade: { label: 'Oficina Criativa', icon: '✍️', color: 'bg-purple-100 text-purple-700 border-purple-300' }
+    };
+
+    // Dados padrão para inicialização
+    const DEFAULT_DATA = {
+      activeKidId: 'carol',
+      kids: [
+        {
+          id: 'carol',
+          name: 'Carol',
+          age: 11,
+          avatar: '🎸',
+          title: 'Mestre Criativa & Compositora (11 anos)',
+          level: 1,
+          xp: 25,
+          xpToNextLevel: 100,
+          coins: 20,
+          totalXP: 25,
+          tasks: [
+            { id: 'c1', title: 'Compor trecho de música ou capítulo da história', category: 'criatividade', xp: 30, coins: 10, completed: false },
+            { id: 'c2', title: 'Estudo avançado de Espanhol / Idiomas (20 min)', category: 'estudos', xp: 25, coins: 8, completed: false },
+            { id: 'c3', title: 'Organizar escrivaninha e planejamento escolar semanal', category: 'organizacao', xp: 20, coins: 5, completed: true },
+            { id: 'c4', title: 'Manter a rotina de cuidados e organização pessoal', category: 'cuidados', xp: 15, coins: 4, completed: false }
+          ],
+          rewards: [
+            { id: 'r1', title: 'Escolher o Filme de Sexta-feira em Família', icon: '🎬', cost: 25, redeemed: false },
+            { id: 'r2', title: 'Tempo Extra para Videogame / Projetos', icon: '🎮', cost: 40, redeemed: false },
+            { id: 'r3', title: 'Passeio Especial no Fim de Semana', icon: '🍦', cost: 60, redeemed: false }
+          ]
+        },
+        {
+          id: 'flavinho',
+          name: 'Flavinho',
+          age: 9,
+          avatar: '🚀',
+          title: 'Explorador da Autonomia (9 anos)',
+          level: 1,
+          xp: 15,
+          xpToNextLevel: 100,
+          coins: 12,
+          totalXP: 15,
+          tasks: [
+            { id: 'f1', title: 'Fazer as lições de casa do dia com capricho', category: 'estudos', xp: 25, coins: 8, completed: false },
+            { id: 'f2', title: 'Praticar Espanhol por 15 minutos', category: 'estudos', xp: 20, coins: 6, completed: false },
+            { id: 'f3', title: 'Arrumar a mochila da escola e guardar brinquedos', category: 'organizacao', xp: 20, coins: 5, completed: true },
+            { id: 'f4', title: 'Escovar dentes e arrumar o quarto de manhã', category: 'cuidados', xp: 15, coins: 4, completed: false }
+          ],
+          rewards: [
+            { id: 'r10', title: 'Escolher a Sobremesa do Fim de Semana', icon: '🍰', cost: 25, redeemed: false },
+            { id: 'r11', title: 'Sessão de Jogos ou Cabaninha em Família', icon: '⛺', cost: 45, redeemed: false }
+          ]
+        }
+      ]
+    };
+
+    let appData = null;
+    let selectedCategoryFilter = 'todas';
+    let currentTab = 'missions';
+
+    // --- SOMS E EFEITOS DE ÁUDIO (TONE.JS) ---
+    function playSound(type) {
+      try {
+        if (type === 'complete') {
+          const synth = new Tone.Synth().toDestination();
+          const now = Tone.now();
+          synth.triggerAttackRelease("C5", "8n", now);
+          synth.triggerAttackRelease("G5", "8n", now + 0.15);
+        } else if (type === 'levelUp') {
+          const synth = new Tone.PolySynth().toDestination();
+          const now = Tone.now();
+          synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n", now);
+        } else if (type === 'buy') {
+          const synth = new Tone.MembraneSynth().toDestination();
+          synth.triggerAttackRelease("C3", "8n");
+        }
+      } catch (e) {
+        console.log("Audio feedback error:", e);
+      }
+    }
+
+    // --- INICIALIZAÇÃO & LOCAL STORAGE ---
+    function initApp() {
+      const saved = localStorage.getItem('missao_autonomia_db');
+      if (saved) {
+        try {
+          appData = JSON.parse(saved);
+        } catch (e) {
+          appData = DEFAULT_DATA;
+        }
+      } else {
+        appData = DEFAULT_DATA;
+        saveData();
+      }
+
+      renderProfileSelector();
+      renderActiveKid();
+      renderCategoryFilters();
+      renderMissions();
+      renderRewards();
+    }
+
+    function saveData() {
+      localStorage.setItem('missao_autonomia_db', JSON.stringify(appData));
+    }
+
+    function getActiveKid() {
+      return appData.kids.find(k => k.id === appData.activeKidId) || appData.kids[0];
+    }
+
+    // --- INTERACTION & RENDERING ---
+    function renderProfileSelector() {
+      const container = document.getElementById('profileSelector');
+      container.innerHTML = appData.kids.map(kid => `
+        <button onclick="switchProfile('${kid.id}')" 
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+            kid.id === appData.activeKidId 
+              ? 'bg-brandPurple text-white shadow-md' 
+              : 'text-slate-600 hover:bg-slate-200'
+          }">
+          <span class="text-base">${kid.avatar}</span>
+          <span>${kid.name}</span>
+        </button>
+      `).join('');
+    }
+
+    function switchProfile(kidId) {
+      appData.activeKidId = kidId;
+      saveData();
+      renderProfileSelector();
+      renderActiveKid();
+      renderMissions();
+      renderRewards();
+    }
+
+    function renderActiveKid() {
+      const kid = getActiveKid();
+      
+      document.getElementById('heroAvatar').innerText = kid.avatar;
+      document.getElementById('heroName').innerText = kid.name;
+      document.getElementById('heroTitle').innerText = kid.title || 'Super Aprendiz';
+      document.getElementById('heroLevelBadge').innerText = `Nível ${kid.level}`;
+      document.getElementById('heroCoins').innerText = kid.coins;
+      document.getElementById('heroTotalXP').innerText = `${kid.totalXP} XP`;
+      document.getElementById('xpText').innerText = `${kid.xp} / ${kid.xpToNextLevel} XP`;
+
+      const progressPercent = Math.min(100, Math.round((kid.xp / kid.xpToNextLevel) * 100));
+      document.getElementById('xpBar').style.width = `${progressPercent}%`;
+
+      // Stats
+      const completed = kid.tasks.filter(t => t.completed).length;
+      const pending = kid.tasks.length - completed;
+      const redeemed = kid.rewards ? kid.rewards.filter(r => r.redeemed).length : 0;
+
+      document.getElementById('completedCount').innerText = completed;
+      document.getElementById('pendingCount').innerText = pending;
+      document.getElementById('unlockedRewardsCount').innerText = `${redeemed} Prêmios`;
+    }
+
+    function renderCategoryFilters() {
+      const container = document.getElementById('categoryFilters');
+      container.innerHTML = Object.keys(CATEGORIES).map(catKey => {
+        const cat = CATEGORIES[catKey];
+        const isActive = selectedCategoryFilter === catKey;
+        return `
+          <button onclick="filterCategory('${catKey}')" 
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border ${
+              isActive 
+                ? 'bg-brandBlue text-white border-brandBlue shadow-sm' 
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }">
+            <span>${cat.icon}</span>
+            <span>${cat.label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function filterCategory(catKey) {
+      selectedCategoryFilter = catKey;
+      renderCategoryFilters();
+      renderMissions();
+    }
+
+    function renderMissions() {
+      const kid = getActiveKid();
+      const container = document.getElementById('missionsList');
+
+      let filteredTasks = kid.tasks;
+      if (selectedCategoryFilter !== 'todas') {
+        filteredTasks = kid.tasks.filter(t => t.category === selectedCategoryFilter);
+      }
+
+      if (filteredTasks.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center text-slate-500">
+            <span class="text-4xl block mb-2">🎉</span>
+            <p class="font-bold">Nenhuma missão por aqui nesta categoria!</p>
+            <p class="text-xs">Cadastre novas missões no botão acima.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredTasks.map(task => {
+        const catInfo = CATEGORIES[task.category] || CATEGORIES.estudos;
+        return `
+          <div class="task-card glass-card rounded-2xl p-4 flex items-center justify-between gap-3 border-l-8 ${
+            task.completed ? 'opacity-60 border-l-slate-400 bg-slate-50/80' : 'border-l-brandBlue'
+          }">
+            <div class="flex items-center gap-3.5 flex-1 min-w-0">
+              <!-- Custom Checkbox Button -->
+              <button onclick="toggleTask('${task.id}')" 
+                class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl transition-all shadow-sm ${
+                  task.completed 
+                    ? 'bg-brandGreen text-white' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-400 border-2 border-slate-300'
+                }">
+                <i class="fa-solid ${task.completed ? 'fa-check' : 'fa-bolt'}"></i>
+              </button>
+
+              <div class="truncate">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded-md border ${catInfo.color}">
+                    ${catInfo.icon} ${catInfo.label}
+                  </span>
+                </div>
+                <h4 class="font-bold text-sm sm:text-base text-slate-800 truncate ${task.completed ? 'line-through text-slate-500' : ''}">
+                  ${task.title}
+                </h4>
+              </div>
+            </div>
+
+            <!-- Task Rewards & Actions -->
+            <div class="flex items-center gap-2">
+              <div class="text-right text-xs font-bold">
+                <span class="text-blue-600 block">+${task.xp} XP</span>
+                <span class="text-amber-600 block">+${task.coins} 🪙</span>
+              </div>
+              <button onclick="deleteTask('${task.id}')" class="text-slate-300 hover:text-brandRed p-2 text-sm transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- GAME LOGIC: TOGGLE TASK & XP PROGRESSION ---
+    function toggleTask(taskId) {
+      const kid = getActiveKid();
+      const task = kid.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      task.completed = !task.completed;
+
+      if (task.completed) {
+        // Gain Rewards
+        kid.xp += task.xp;
+        kid.totalXP += task.xp;
+        kid.coins += task.coins;
+
+        playSound('complete');
+        triggerConfetti();
+
+        // Level Up Check
+        if (kid.xp >= kid.xpToNextLevel) {
+          kid.level += 1;
+          kid.xp = kid.xp - kid.xpToNextLevel;
+          kid.xpToNextLevel = Math.round(kid.xpToNextLevel * 1.3);
+          
+          setTimeout(() => {
+            playSound('levelUp');
+            alert(`🎉 PARABÉNS! ${kid.name} subiu para o Nível ${kid.level}! 🚀`);
+          }, 300);
+        }
+      } else {
+        // Revert Rewards
+        kid.xp = Math.max(0, kid.xp - task.xp);
+        kid.totalXP = Math.max(0, kid.totalXP - task.xp);
+        kid.coins = Math.max(0, kid.coins - task.coins);
+      }
+
+      saveData();
+      renderActiveKid();
+      renderMissions();
+    }
+
+    function deleteTask(taskId) {
+      const kid = getActiveKid();
+      kid.tasks = kid.tasks.filter(t => t.id !== taskId);
+      saveData();
+      renderActiveKid();
+      renderMissions();
+    }
+
+    // --- REWARDS & SHOP LOGIC ---
+    function renderRewards() {
+      const kid = getActiveKid();
+      const container = document.getElementById('rewardsGrid');
+      const rewards = kid.rewards || [];
+
+      if (rewards.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full glass-card rounded-2xl p-8 text-center text-slate-500">
+            <span class="text-4xl block mb-2">🎁</span>
+            <p class="font-bold">Nenhum prêmio cadastrado ainda!</p>
+            <p class="text-xs">Adicione combinados da família para trocar por moedas.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = rewards.map(reward => {
+        const canAfford = kid.coins >= reward.cost;
+        return `
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-2 ${
+            reward.redeemed ? 'bg-emerald-50/70 border-emerald-300' : 'border-slate-200'
+          }">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="flex items-center gap-3">
+                <span class="text-4xl p-2 bg-white rounded-2xl shadow-inner">${reward.icon}</span>
+                <div>
+                  <h4 class="font-bold text-slate-800 text-sm sm:text-base">${reward.title}</h4>
+                  <span class="inline-flex items-center gap-1 text-xs font-extrabold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md mt-1">
+                    🪙 ${reward.cost} Moedas
+                  </span>
+                </div>
+              </div>
+              <button onclick="deleteReward('${reward.id}')" class="text-slate-300 hover:text-brandRed text-xs">
+                <i class="fa-solid fa-xmark text-base"></i>
+              </button>
+            </div>
+
+            <div>
+              ${reward.redeemed 
+                ? `<div class="w-full py-2 bg-emerald-500 text-white font-bold text-xs text-center rounded-xl shadow-sm flex items-center justify-center gap-1">
+                     <i class="fa-solid fa-circle-check"></i> RESGATADO! (Entregar ao Herói)
+                   </div>`
+                : `<button onclick="redeemReward('${reward.id}')" 
+                     ${!canAfford ? 'disabled' : ''} 
+                     class="w-full py-2.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm ${
+                       canAfford 
+                         ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer' 
+                         : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                     }">
+                     ${canAfford ? 'Trocar Minhas Moedas 🪙' : `Faltam ${reward.cost - kid.coins} Moedas`}
+                   </button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function redeemReward(rewardId) {
+      const kid = getActiveKid();
+      const reward = kid.rewards.find(r => r.id === rewardId);
+      
+      if (!reward || kid.coins < reward.cost || reward.redeemed) return;
+
+      kid.coins -= reward.cost;
+      reward.redeemed = true;
+
+      playSound('buy');
+      triggerConfetti();
+
+      saveData();
+      renderActiveKid();
+      renderRewards();
+    }
+
+    function deleteReward(rewardId) {
+      const kid = getActiveKid();
+      kid.rewards = kid.rewards.filter(r => r.id !== rewardId);
+      saveData();
+      renderActiveKid();
+      renderRewards();
+    }
+
+    // --- UI NAVIGATION & MODALS ---
+    function switchTab(tab) {
+      currentTab = tab;
+      const mTab = document.getElementById('tabMissions');
+      const sTab = document.getElementById('tabShop');
+      const mBtn = document.getElementById('tabMissionsBtn');
+      const sBtn = document.getElementById('tabShopBtn');
+
+      if (tab === 'missions') {
+        mTab.classList.remove('hidden');
+        sTab.classList.add('hidden');
+        mBtn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-brandPurple text-white';
+        sBtn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-white text-slate-600 hover:bg-slate-100';
+      } else {
+        mTab.classList.add('hidden');
+        sTab.classList.remove('hidden');
+        sBtn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-amber-500 text-white';
+        mBtn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-base transition flex items-center justify-center gap-2 shadow-md bg-white text-slate-600 hover:bg-slate-100';
+      }
+    }
+
+    // Modal: Task
+    function openAddTaskModal() {
+      document.getElementById('taskModal').classList.remove('hidden');
+    }
+    function closeAddTaskModal() {
+      document.getElementById('taskModal').classList.add('hidden');
+    }
+    function handleAddTask(e) {
+      e.preventDefault();
+      const title = document.getElementById('taskTitle').value;
+      const category = document.getElementById('taskCategory').value;
+      const xp = parseInt(document.getElementById('taskXP').value) || 20;
+      const coins = parseInt(document.getElementById('taskCoins').value) || 5;
+
+      const kid = getActiveKid();
+      kid.tasks.push({
+        id: 'task_' + Date.now(),
+        title,
+        category,
+        xp,
+        coins,
+        completed: false
+      });
+
+      saveData();
+      renderActiveKid();
+      renderMissions();
+      closeAddTaskModal();
+      document.getElementById('taskForm').reset();
+    }
+
+    // Modal: Reward
+    function openAddRewardModal() {
+      document.getElementById('rewardModal').classList.remove('hidden');
+    }
+    function closeAddRewardModal() {
+      document.getElementById('rewardModal').classList.add('hidden');
+    }
+    function handleAddReward(e) {
+      e.preventDefault();
+      const title = document.getElementById('rewardTitle').value;
+      const icon = document.getElementById('rewardIcon').value || '🎁';
+      const cost = parseInt(document.getElementById('rewardCost').value) || 20;
+
+      const kid = getActiveKid();
+      if (!kid.rewards) kid.rewards = [];
+      
+      kid.rewards.push({
+        id: 'rew_' + Date.now(),
+        title,
+        icon,
+        cost,
+        redeemed: false
+      });
+
+      saveData();
+      renderActiveKid();
+      renderRewards();
+      closeAddRewardModal();
+      document.getElementById('rewardForm').reset();
+    }
+
+    // Modal: Avatar Selection
+    function editAvatar() {
+      const container = document.getElementById('avatarOptions');
+      container.innerHTML = AVATARS.map(av => `
+        <button onclick="setAvatar('${av}')" class="text-3xl p-3 bg-slate-100 hover:bg-amber-100 rounded-2xl border-2 border-slate-200 transition">
+          ${av}
+        </button>
+      `).join('');
+      document.getElementById('avatarModal').classList.remove('hidden');
+    }
+    function setAvatar(av) {
+      const kid = getActiveKid();
+      kid.avatar = av;
+      saveData();
+      renderProfileSelector();
+      renderActiveKid();
+      closeAvatarModal();
+    }
+    function closeAvatarModal() {
+      document.getElementById('avatarModal').classList.add('hidden');
+    }
+
+    // --- VISUAL EFFECTS ---
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    // Start App on Window Load
+    window.onload = function() {
+      initApp();
+    };
+  </script>
+</body>
+</html>
